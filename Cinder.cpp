@@ -393,8 +393,8 @@ void Cinder::turn(int error)
   static int previousError = 0;
   static double I = 0;
 
-  const float Kp = 127/180;
-  const float Kd = 1;
+  const float Kp = 127.0/180.0;
+  const float Kd = 0;
   const float Ki = 0;
 
   unsigned long currentTurnTime = millis();
@@ -411,6 +411,12 @@ void Cinder::turn(int error)
   Serial.print(D);
   Serial.print(" | I: ");
   Serial.print(I);
+  Serial.print(" | Kp*P: ");
+  Serial.print(Kp*P);
+  Serial.print(" | Kd*D: ");
+  Serial.print(Kd*D);
+  Serial.print(" | Ki*I: ");
+  Serial.print(Ki*I);
   Serial.print(" | Output: ");
   Serial.println(output);
   
