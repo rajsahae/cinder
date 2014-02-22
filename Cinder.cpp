@@ -178,6 +178,18 @@ void Cinder::driveTo(float toLat, float toLon)
     int desiredHeading = TinyGPS::course_to(_currentLat, _currentLon, toLat, toLon);
     float currentDistance = TinyGPS::distance_between(toLat, toLon, _currentLat, _currentLon);
     
+	Serial.print("Location: (");
+	Serial.print(_currentLat);
+	Serial.print(", ");
+	Serial.print(_currentLon);
+	Serial.println(")");
+    Serial.print("Current Heading: ");
+    Serial.println(currentHeading);
+	Serial.print("Desired Heading: ");
+	Serial.println(desiredHeading);
+	Serial.print("Distance to waypoint: ");
+	Serial.println(currentDistance);
+  
     if ( currentDistance < 1 )
     {
       allStop();
