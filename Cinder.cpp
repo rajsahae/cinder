@@ -178,17 +178,17 @@ void Cinder::driveTo(float toLat, float toLon)
     int desiredHeading = TinyGPS::course_to(_currentLat, _currentLon, toLat, toLon);
     float currentDistance = TinyGPS::distance_between(toLat, toLon, _currentLat, _currentLon);
     
-	Serial.print("Location: (");
-	Serial.print(_currentLat);
-	Serial.print(", ");
-	Serial.print(_currentLon);
-	Serial.println(")");
-    Serial.print("Current Heading: ");
-    Serial.println(currentHeading);
-	Serial.print("Desired Heading: ");
-	Serial.println(desiredHeading);
-	Serial.print("Distance to waypoint: ");
-	Serial.println(currentDistance);
+    Serial.print("[driveTo] Location: (");
+    Serial.print(_currentLat);
+    Serial.print(", ");
+    Serial.print(_currentLon);
+    Serial.print(")");
+    Serial.print(" | currentHeading: ");
+    Serial.print(currentHeading);
+    Serial.print(" | desireddHeading: ");
+    Serial.print(desiredHeading);
+    Serial.print(" | currentDistance: ");
+    Serial.println(currentDistance);
   
     if ( currentDistance < 1 )
     {
@@ -304,6 +304,11 @@ void Cinder::configureMotorController(int baud, boolean dual, byte motorNum)
 
 void Cinder::setMotorSpeed(int motor, int spd)
 {
+  Serial.print("[setMotorSpeed] motor: ");
+  Serial.print(motor);
+  Serial.print("speed: ");
+  Serial.println(spd);
+
   // motorspeed can range from -127 to 127
   
   if (motor == _motor1) 
@@ -405,7 +410,7 @@ void Cinder::turn(int error)
   
   float output = Kp*P + Kd*D + Ki*I;
   
-  Serial.print("P: ");
+  Serial.print("[turn] P: ");
   Serial.print(P);
   Serial.print(" | D: ");
   Serial.print(D);
