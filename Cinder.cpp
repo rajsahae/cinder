@@ -306,7 +306,7 @@ void Cinder::setMotorSpeed(int motor, int spd)
 {
   Serial.print("[setMotorSpeed] motor: ");
   Serial.print(motor);
-  Serial.print("speed: ");
+  Serial.print(" | speed: ");
   Serial.println(spd);
 
   // motorspeed can range from -127 to 127
@@ -384,9 +384,21 @@ void Cinder::goStraight(int error)
 {
   // This is a PID control function for going straight.
   // The error is the distance to waypoint.
+  
+  Serial.print("[goStraight] error: ");
+  Serial.println(error);
 
-  setMotorSpeed(_motor1, -error);
-  setMotorSpeed(_motor2, -error);
+  int speed = 0;
+
+  if (error < 5) {
+    speed = 35;
+  }
+  else {
+    speed = 127;
+  }
+
+  setMotorSpeed(_motor1, -speed);
+  setMotorSpeed(_motor2, -speed);
 }
 
 void Cinder::turn(int error)
@@ -399,8 +411,8 @@ void Cinder::turn(int error)
   static double I = 0;
 
   const float Kp = 127.0/180.0;
-  const float Kd = 0;
-  const float Ki = 0;
+  const float Kd = 1E-6;
+  const float Ki = 1E-7;
 
   unsigned long currentTurnTime = millis();
 
