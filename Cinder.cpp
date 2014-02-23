@@ -1,10 +1,10 @@
 /*
-Cinder.cpp - Library for interacting with the Cinder robotics platform
-Created by Raj Sahae, Jan 26, 2014
-Released into the public domain
+   Cinder.cpp - Library for interacting with the Cinder robotics platform
+   Created by Raj Sahae, Jan 26, 2014
+   Released into the public domain
 
-The pins 8,9,10,11,12,13 are used by the Cinder library.
-*/
+   The pins 8,9,10,11,12,13 are used by the Cinder library.
+   */
 
 #include "Arduino.h"
 #include "SoftwareSerial.h"
@@ -35,7 +35,7 @@ Cinder::Cinder() :
   // GPS: EM-406A
   _gpsRxPin(9),
   _gpsTxPin(8),
-    
+
   _lcd(_lcdAddress, 20, 4), // 20x4 _lcd
   _serialGpsController(_gpsRxPin, _gpsTxPin),
   _serialMotorController(_smcRxPin, _smcTxPin)
@@ -52,12 +52,12 @@ void Cinder::begin()
   _lcd.backlight();
   _lcd.setCursor(0,0); // char 2, line 0
   _lcd.print("Cinder Lib v1.0");
-  
+
   /*
-  Somehow, configuring the motor controller is causing the GPS to completely fail.
-  I have no idea why it's happening or how to fix it but I suspect it's an interference
-  problem with the serial interface.
-  */
+     Somehow, configuring the motor controller is causing the GPS to completely fail.
+     I have no idea why it's happening or how to fix it but I suspect it's an interference
+     problem with the serial interface.
+     */
   // Configure the motor controller at 9600 baud, dual motors = true, motor1 number = 2 (motor2 = 3)
   _lcd.setCursor(0,1);
   _lcd.print("Create motor control");
@@ -67,23 +67,23 @@ void Cinder::begin()
   _lcd.setCursor(0,2);
   _lcd.print("Create gps control");
   _serialGpsController.begin(4800);
-  
+
   _lcd.setCursor(0,3);
   _lcd.print("Config motor control");
-  
+
   // Pin to control power to the motors
   // Kill power to motors to ensure they don't move during setup
   pinMode(_vmotControlPin, OUTPUT);
   digitalWrite(_vmotControlPin, LOW);
- 
+
   // You need to write the reset pin to low before you write it to high.
   pinMode(_smcResetPin, OUTPUT);
   digitalWrite(_smcResetPin, LOW);
   delay(200);
   digitalWrite(_smcResetPin, HIGH);
   delay(200);
-  
-  
+
+
   // we have to reset the controller after configuring it for it to work
   // delay 3 seconds to visually inspect the motor controller is correctly configured
   delay(200);
@@ -91,7 +91,7 @@ void Cinder::begin()
   delay(200);
   digitalWrite(_smcResetPin, HIGH);
   delay(200);
-  
+
   // Turn the motor power back on
   digitalWrite(_vmotControlPin, HIGH);
 }
@@ -99,7 +99,7 @@ void Cinder::begin()
 boolean Cinder::hasFix()
 {
   acquireGps();
-  
+
   if ( _currentAge == TinyGPS::GPS_INVALID_AGE )
     return false;
   else if ( _currentAge > 5000 )
@@ -114,20 +114,20 @@ void Cinder::acquireGps()
 {
   while(true)
   {
-  
+
     // Pull in GPS data - loop back if we don't get any
     if(!feedgps()) continue;
-    
+
     // Get our coordinates from GPS
     _gps.f_get_position(&_currentLat, &_currentLon, &_currentAge);
-    
+
     // Error check the gps data
     if (_currentAge == TinyGPS::GPS_INVALID_AGE) continue;
     if (_currentLat == TinyGPS::GPS_INVALID_F_ANGLE) continue;
     if (_currentLon == TinyGPS::GPS_INVALID_F_ANGLE) continue;
     if (_gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES) continue;
     if (_gps.hdop() == TinyGPS::GPS_INVALID_HDOP) continue;
-    
+
     break;
   }
 }
@@ -135,17 +135,17 @@ void Cinder::acquireGps()
 void Cinder::driveTo(float toLat, float toLon)
 {
   const int rate = 50; // delay rate in milliseconds
-  
+
   _lcd.clear();
   _lcd.print("Pos:");
   _lcd.setCursor(0,1);
   _lcd.print("Heading:");
   _lcd.setCursor(0,2);
   _lcd.print("Bearing:");
-  
+
   _lcd.setCursor(0,3);
   _lcd.print("Distance:");
-  
+
   _lcd.setCursor(14,1);
   _lcd.print("M1:");
   _lcd.setCursor(14,2);
@@ -157,27 +157,27 @@ void Cinder::driveTo(float toLat, float toLon)
   int previousHeading = -1;
   int previousDesiredHeading = -1;
   float previousDistance = -1.0;
-    
+
   while (true)
   {
     acquireGps();
-    
+
     if ( _currentLat != previousLat )
     {
       lcdClearAndPrint(5, 0, _currentLat);
       previousLat = _currentLat;
     }
-    
+
     if (_currentLon != previousLon )
     {
       lcdClearAndPrint(11, 0, _currentLon);
       previousLon = _currentLon;
     }
-    
+
     int currentHeading = readFromCompass();
     int desiredHeading = TinyGPS::course_to(_currentLat, _currentLon, toLat, toLon);
     float currentDistance = TinyGPS::distance_between(toLat, toLon, _currentLat, _currentLon);
-    
+
     Serial.print("[driveTo] Location: (");
     Serial.print(_currentLat);
     Serial.print(", ");
@@ -189,31 +189,31 @@ void Cinder::driveTo(float toLat, float toLon)
     Serial.print(desiredHeading);
     Serial.print(" | currentDistance: ");
     Serial.println(currentDistance);
-  
+
     if ( currentDistance < 1 )
     {
       allStop();
       return;
     }
-    
+
     if (currentHeading != previousHeading)
     {
       lcdClearAndPrint(8, 1, currentHeading);
       previousHeading = currentHeading;
     }
-    
+
     if (desiredHeading != previousDesiredHeading)
     {
       lcdClearAndPrint(8, 2, desiredHeading);
       previousHeading = currentHeading;
     }
-    
+
     if (currentDistance != previousDistance)
     {
       lcdClearAndPrint(9, 3, currentDistance);
       previousDistance = currentDistance;
     }
-    
+
     int headingDelta = desiredHeading - currentHeading;
     // Possible cases here (headingDelta)
     // 1 -> 180 or -180 -> -359 == right turn
@@ -224,18 +224,18 @@ void Cinder::driveTo(float toLat, float toLon)
       goStraight(currentDistance);
     }
     else if ( 0 < headingDelta && headingDelta <= 180 ) {
-	  turn(headingDelta);
-	}
-	else if ( -360 < headingDelta && headingDelta <= -180 ) {
+      turn(headingDelta);
+    }
+    else if ( -360 < headingDelta && headingDelta <= -180 ) {
       turn(headingDelta + 360);
     }
     else if ( 180 < headingDelta && headingDelta < 360 ) {
-	  turn(headingDelta - 360);
-	}
-	else if ( -180 < headingDelta && headingDelta < 0 ) {
+      turn(headingDelta - 360);
+    }
+    else if ( -180 < headingDelta && headingDelta < 0 ) {
       turn(headingDelta);
     }
-	delay(rate);
+    delay(rate);
   }
 }
 
@@ -259,23 +259,23 @@ int Cinder::readFromCompass()
 
   // (MSB + LSB sum) / 10 - this should be a number between 0 and 360
   int heading = ((MSB << 8) + LSB) / 10;
-  
+
   // Need to account for the physical offset of the compass
   heading -= _compassOffset;
   if (heading < 0) heading += 360;
-  
+
   return heading;
 }
 
 boolean Cinder::feedgps()
 {
   boolean encoded = false;
-	while (_serialGpsController.available())
-	{
+  while (_serialGpsController.available())
+  {
     encoded = true;
-		_gps.encode(_serialGpsController.read());
-	}
-  
+    _gps.encode(_serialGpsController.read());
+  }
+
   return encoded;
 }
 
@@ -286,19 +286,19 @@ void Cinder::configureMotorController(int baud, boolean dual, byte motorNum)
 
   // Delay for 100ms
   delay(100);
-  
+
   // Configuration is achieved by sending a three-byte packet consisting of the start byte, a 
   // configuration command byte, and the new configuration byte:
   // start byte = 0x80, change configuration = 0x02, new settings, 0x00-0x7F
   _serialMotorController.write(_startByte);
   _serialMotorController.write(_changeConfigByte);
-  
+
   byte configByte = 0;
-  
+
   if (!dual) configByte = B01000000;
-  
+
   configByte |= motorNum;
-  
+
   _serialMotorController.write(configByte);
 }
 
@@ -310,25 +310,25 @@ void Cinder::setMotorSpeed(int motor, int spd)
   Serial.println(spd);
 
   // motorspeed can range from -127 to 127
-  
+
   if (motor == _motor1) 
     lcdClearAndPrint(17, 1, spd/10);
   else if (motor == _motor2)
     lcdClearAndPrint(17, 2, spd/10);
-  
+
   // To set the speed and direction of a motor, send a four-byte command with the following 
   // structure to the motor controller:
   // start byte = 0x80, device type = 0x00, motor # and direction, motor speed
   _serialMotorController.write(_startByte);
-  
+
   // This byte identifies the device type for which the command is 
   // intended, and it should be 0x00 for commands sent to this motor controller. All devices 
   // that are not dual motor controllers ignore all subsequent bytes until another start byte is 
   // sent.
   _serialMotorController.write(_deviceType);
-  
+
   byte motorByte = 0;
-  
+
   if (spd < 0)
   {
     motorByte = 0; // OR 00000000
@@ -338,16 +338,16 @@ void Cinder::setMotorSpeed(int motor, int spd)
   {
     motorByte = 1; // OR 00000001
   }
-  
+
   if (spd > 127)
   {
     spd = 127;
   }
-  
+
   motorByte |= ( motor << 1);
 
   _serialMotorController.write(motorByte);
-  
+
   // The most significant bit must be zero since this is not a start 
   // byte. The remaining seven bits specify the motor speed. The possible range of values 
   // for byte 4 is thus 0x00 to 0x7F (0 to 127 decimal). 0x00 turns the motor off, and 0x7F 
@@ -403,13 +403,13 @@ void Cinder::turn(int error)
   const float Ki = 0;
 
   unsigned long currentTurnTime = millis();
-  
+
   float P = error;
   float D = (error - previousError)/(currentTurnTime - lastTurnTime);
   I += error/(currentTurnTime - lastTurnTime);
-  
+
   float output = Kp*P + Kd*D + Ki*I;
-  
+
   Serial.print("[turn] P: ");
   Serial.print(P);
   Serial.print(" | D: ");
@@ -424,13 +424,13 @@ void Cinder::turn(int error)
   Serial.print(Ki*I);
   Serial.print(" | Output: ");
   Serial.println(output);
-  
+
   setMotorSpeed(_motor1, (int)output);
   setMotorSpeed(_motor2, (int)-output);
-  
+
   lastTurnTime = currentTurnTime;
   previousError = error;
-  
+
 }
 
 boolean Cinder::withinTwoDegrees(int delta)
@@ -444,7 +444,7 @@ boolean Cinder::withinTwoDegrees(int delta)
     return true;
   else
     return false;
-  
+
 }
 
 void Cinder::allStop()
