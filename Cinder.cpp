@@ -40,11 +40,12 @@ Cinder::Cinder() :
   _serialGpsController(_gpsRxPin, _gpsTxPin),
   _serialMotorController(_smcRxPin, _smcTxPin)
 {
-  Serial.begin(115200);
 }
 
 void Cinder::begin()
 {
+
+  Serial.begin(115200);
 
   Wire.begin();
   _lcd.init();
@@ -112,6 +113,8 @@ boolean Cinder::hasFix()
 
 void Cinder::acquireGps()
 {
+  Serial.println("[acquireGps] Acquiring Gps fix");
+
   while(true)
   {
 
@@ -130,11 +133,30 @@ void Cinder::acquireGps()
 
     break;
   }
+
+  Serial.print("[acquireGps] lat/lng: (");
+  Serial.print(_currentLat);
+  Serial.print(",");
+  Serial.print(_currentLon);
+  Serial.print(") | age: ");
+  Serial.print(_currentAge);
+  Serial.print(" | sats: ");
+  Serial.print(_gps.satellites());
+  Serial.print(" | hdop: ");
+  Serial.println(_gps.hdop());
+
 }
 
 void Cinder::driveTo(float toLat, float toLon)
 {
-  const int rate = 50; // delay rate in milliseconds
+
+  Serial.print("[driveTo] Drive to waypoint(");
+  Serial.print(toLat);
+  Serial.print(",");
+  Serial.print(toLon);
+  Serial.println(")");
+
+  const int rate = 0; // delay rate in milliseconds
 
   _lcd.clear();
   _lcd.print("Pos:");
@@ -311,10 +333,12 @@ void Cinder::setMotorSpeed(int motor, int spd)
 
   // motorspeed can range from -127 to 127
 
-  if (motor == _motor1) 
+  if (motor == _motor1) {
     lcdClearAndPrint(17, 1, spd/10);
-  else if (motor == _motor2)
+    spd = -spd;
+  }  else if (motor == _motor2) {
     lcdClearAndPrint(17, 2, spd/10);
+  }
 
   // To set the speed and direction of a motor, send a four-byte command with the following 
   // structure to the motor controller:
@@ -391,14 +415,14 @@ void Cinder::goStraight(int error)
   int speed = 0;
 
   if (error < 5) {
-    speed = 35;
+    speed = 50;
   }
   else {
     speed = 127;
   }
 
-  setMotorSpeed(_motor1, -speed);
-  setMotorSpeed(_motor2, -speed);
+  setMotorSpeed(_motor1, speed);
+  setMotorSpeed(_motor2, speed);
 }
 
 void Cinder::turn(int error)
@@ -411,14 +435,28 @@ void Cinder::turn(int error)
   static double I = 0;
 
   const float Kp = 127.0/180.0;
-  const float Kd = 1E-6;
-  const float Ki = 1E-7;
+  const float Kd = -50;
+  const float Ki = 100;
 
   unsigned long currentTurnTime = millis();
+  double timeDelta = currentTurnTime - lastTurnTime;
+  float errorDelta = error - previousError;
 
   float P = error;
-  float D = (error - previousError)/(currentTurnTime - lastTurnTime);
-  I += error/(currentTurnTime - lastTurnTime);
+  float D = errorDelta / timeDelta;
+
+  Serial.print("[turn] error: ");
+  Serial.print(error);
+  Serial.print(" | CurrentTurnTime: ");
+  Serial.print(currentTurnTime);
+  Serial.print(" | LastTurnTime: ");
+  Serial.print(lastTurnTime);
+  Serial.print(" | current-last: ");
+  Serial.print(timeDelta);
+  Serial.print(" | I increase: ");
+  Serial.println(error / timeDelta);
+
+  I += error/timeDelta;
 
   float output = Kp*P + Kd*D + Ki*I;
 

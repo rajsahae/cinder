@@ -9,10 +9,6 @@ Cinder cinder;
 void setup()
 {
   cinder.begin();
-  Serial.begin(115200);
-  Serial.println("Acquiring GPS");
-  cinder.acquireGps();
-  Serial.println("GPS acquired");
 }
 
 void loop()
