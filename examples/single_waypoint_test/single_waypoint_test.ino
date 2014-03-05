@@ -9,9 +9,9 @@ Cinder cinder;
 void setup()
 {
   cinder.begin();
+  cinder.driveTo(xlat, xlon);
 }
 
 void loop()
 {
-  cinder.driveTo(xlat, xlon);
 }
