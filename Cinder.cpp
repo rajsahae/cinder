@@ -243,7 +243,7 @@ void Cinder::driveTo(float toLat, float toLon)
     // 0 = go straight
     if ( withinTwoDegrees(headingDelta) )
     {
-      goStraight(currentDistance);
+      goStraight(headingDelta);
     }
     else if ( 0 < headingDelta && headingDelta <= 180 ) {
       turn(headingDelta);
@@ -407,22 +407,84 @@ void Cinder::lcdClearAndPrint(int col, int row, int num)
 void Cinder::goStraight(int error)
 {
   // This is a PID control function for going straight.
-  // The error is the distance to waypoint.
+  // The error is the difference in compass heading.
   
   Serial.print("[goStraight] error: ");
   Serial.println(error);
 
-  int speed = 0;
+  static unsigned long lastTime = 0;
+  static int previousError = 0;
+  static double I = 0;
 
-  if (error < 5) {
-    speed = 50;
+  // min/max output should be 27
+  const float Kp = 27.0/180.0;
+  const float Kd = -0;
+  const float Ki = 0;
+
+  unsigned long currentTime = millis();
+  double timeDelta = currentTime - lastTime;
+  float errorDelta = error - previousError;
+
+  float P = error;
+  float D = errorDelta / timeDelta;
+
+  Serial.print("[goStraight] error: ");
+  Serial.print(error);
+  Serial.print(" | CurrentTime: ");
+  Serial.print(currentTime);
+  Serial.print(" | LastTime: ");
+  Serial.print(lastTime);
+  Serial.print(" | current-last: ");
+  Serial.print(timeDelta);
+  Serial.print(" | I increase: ");
+  Serial.println(error / timeDelta);
+
+  I += error/timeDelta;
+
+  float output = base + Kp*P + Kd*D + Ki*I;
+
+  Serial.print("[goStraight] P: ");
+  Serial.print(P);
+  Serial.print(" | D: ");
+  Serial.print(D);
+  Serial.print(" | I: ");
+  Serial.print(I);
+  Serial.print(" | Kp*P: ");
+  Serial.print(Kp*P);
+  Serial.print(" | Kd*D: ");
+  Serial.print(Kd*D);
+  Serial.print(" | Ki*I: ");
+  Serial.print(Ki*I);
+  Serial.print(" | Output: ");
+  Serial.println(output);
+
+  /****************************************************************************
+   * I think my approach here is going to be:
+   *   We should try to keep both wheels at the highest speed possible.
+   *   I think the easiest way is for any output, reset motors to max speed
+   *   and then subtract the amount desired in order to adjust the heading
+   ***************************************************************************/
+  int motor1Speed = 127;
+  int motor2Speed = 127;
+
+  if ( output < 0 ) {
+    // Negative output means we need to turn to the left, so subtract output from
+    // left motor.
+    motor1Speed += output;
+  }
+  else if ( output > 0 ) {
+  // Positive output means subtract fror the right motor.
+    motor2Speed += output;
   }
   else {
-    speed = 127;
+    // Output is 0. Full speed ahead!
   }
 
-  setMotorSpeed(_motor1, speed);
-  setMotorSpeed(_motor2, speed);
+  setMotorSpeed(_motor1, motor1Speed);
+  setMotorSpeed(_motor2, motor2Speed);
+
+  lastTurnTime = currentTurnTime;
+  previousError = error;
 }
 
 void Cinder::turn(int error)
@@ -434,9 +496,17 @@ void Cinder::turn(int error)
   static int previousError = 0;
   static double I = 0;
 
-  const float Kp = 127.0/180.0;
-  const float Kd = -50;
-  const float Ki = 100;
+  float base;
+  if ( error <= 0 )
+    base = -60.0;
+  else
+    base = 60.0;
+
+  const float Kp = 67.0/180.0;
+//  const float Kd = -50;
+//  const float Ki = 100;
+  const float Kd = 0;
+  const float Ki = 0;
 
   unsigned long currentTurnTime = millis();
   double timeDelta = currentTurnTime - lastTurnTime;
@@ -458,7 +528,7 @@ void Cinder::turn(int error)
 
   I += error/timeDelta;
 
-  float output = Kp*P + Kd*D + Ki*I;
+  float output = base + Kp*P + Kd*D + Ki*I;
 
   Serial.print("[turn] P: ");
   Serial.print(P);
